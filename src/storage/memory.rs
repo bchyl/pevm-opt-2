@@ -1,7 +1,7 @@
 use super::KVStore;
 use crate::types::{Key, U256};
 use ahash::AHashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
 /// In-memory key-value store implementation
 #[derive(Clone)]
@@ -30,8 +30,11 @@ impl MemoryStore {
     }
 
     /// Get a snapshot of the current state
-    pub fn snapshot(&self) -> AHashMap<Key, U256> {
-        self.inner.lock().unwrap().clone()
+    pub fn snapshot(&self) -> Result<AHashMap<Key, U256>, String> {
+        self.inner
+            .lock()
+            .map(|guard| guard.clone())
+            .map_err(|e| format!("Mutex lock error: {}", e))
     }
 }
 
@@ -45,39 +48,56 @@ impl KVStore for MemoryStore {
     fn get(&self, key: &Key) -> U256 {
         self.inner
             .lock()
-            .unwrap()
+            .unwrap_or_else(PoisonError::into_inner)
             .get(key)
             .copied()
             .unwrap_or(U256::ZERO)
     }
 
     fn set(&mut self, key: Key, value: U256) {
-        self.inner.lock().unwrap().insert(key, value);
+        self.inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(key, value);
     }
 
     fn contains(&self, key: &Key) -> bool {
-        self.inner.lock().unwrap().contains_key(key)
+        self.inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains_key(key)
     }
 
     fn keys(&self) -> Vec<Key> {
-        self.inner.lock().unwrap().keys().copied().collect()
+        self.inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .keys()
+            .copied()
+            .collect()
     }
 
     fn iter(&self) -> Vec<(Key, U256)> {
         self.inner
             .lock()
-            .unwrap()
+            .unwrap_or_else(PoisonError::into_inner)
             .iter()
             .map(|(k, v)| (*k, *v))
             .collect()
     }
 
     fn clear(&mut self) {
-        self.inner.lock().unwrap().clear();
+        self.inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clear();
     }
 
     fn len(&self) -> usize {
-        self.inner.lock().unwrap().len()
+        self.inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .len()
     }
 }
 
@@ -85,9 +105,13 @@ impl KVStore for MemoryStore {
 
 impl std::fmt::Debug for MemoryStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let map = self.inner.lock().unwrap();
+        let size = self
+            .inner
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .len();
         f.debug_struct("MemoryStore")
-            .field("size", &map.len())
+            .field("size", &size)
             .finish()
     }
 }
@@ -150,7 +174,7 @@ mod tests {
 
         store.set(key, value);
 
-        let snapshot = store.snapshot();
+        let snapshot = store.snapshot().unwrap();
         assert_eq!(snapshot.len(), 1);
         assert_eq!(snapshot.get(&key), Some(&value));
     }

@@ -72,7 +72,7 @@ impl MetricsCollector {
         let tx_latency_p99 = Self::percentile(&latencies, 0.99);
         let tx_latency_max = latencies
             .iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .copied()
             .unwrap_or(0.0);
 
