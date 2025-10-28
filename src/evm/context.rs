@@ -38,6 +38,19 @@ impl<S: KVStore> ExecutionContext<S> {
             gas_limit: u64::MAX,
         }
     }
+    
+    /// Create context with pre-warmed keys (for wave-based execution)
+    pub fn with_warm_keys(storage: S, warm_keys: AHashSet<Key>) -> Self {
+        Self {
+            storage,
+            warm_keys,
+            cold_keys: AHashSet::new(),
+            access_sets: AccessSets::new(),
+            gas_used: 0,
+            stack: Vec::new(),
+            gas_limit: u64::MAX,
+        }
+    }
 
     pub fn with_gas_limit(storage: S, gas_limit: u64) -> Self {
         Self {

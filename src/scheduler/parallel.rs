@@ -1,8 +1,10 @@
 use super::{AccessListBuilder, MIScheduler};
 use crate::evm::{execute_transaction, ExecutionContext};
 use crate::storage::KVStore;
-use crate::types::{Block, ExecutionResult};
+use crate::types::{Block, ExecutionResult, Key};
+use ahash::AHashSet;
 use rayon::prelude::*;
+use std::sync::Arc;
 
 /// Parallel executor using Rayon
 pub struct ParallelExecutor<S: KVStore> {
@@ -33,7 +35,7 @@ impl<S: KVStore> ParallelExecutor<S> {
     /// Returns: (final_storage, results, total_gas, waves)
     /// 
     /// # Algorithm Flow
-    /// ```
+    /// ```text
     /// Input: Block with transactions [tx1, tx2, tx3, tx4]
     /// 
     /// Step 1: Pre-execution estimation
@@ -111,6 +113,9 @@ impl<S: KVStore> ParallelExecutor<S> {
         let mut total_gas = 0;
         let mut runtime_conflicts = 0;
         
+        // Warm keys from previous wave only (not cumulative) for better performance
+        let mut prev_wave_keys = AHashSet::<Key>::new();
+        
         // Optimization: Build transaction index for O(1) lookup
         // Without this, we'd need O(n) scan per wave transaction
         use ahash::AHashMap;
@@ -142,18 +147,21 @@ impl<S: KVStore> ParallelExecutor<S> {
             // Each transaction executes in its own isolated context
             // Rayon automatically manages thread pool and work stealing
             //
-            // Note: Storage state and warm keys are NOT propagated between waves.
-            // Each wave starts from the same base storage state for parallel safety.
-            //
-            // trade-off: not propagating storage state. Since the scheduler ensures that conflicting transactions
-            // are never executed in the same wave, transactions within a wave are independent and do not need to observe each other’s state.
-            // This avoids the significant overhead of state propagation while maintaining correctness — as verified by the runtime log:
-            // “Parallel execution complete: 5000 results, 231360815 gas used, 0 runtime conflicts.”
+            // Warm keys optimization: Pass only previous wave's keys
             let base_storage = &self.storage;
+            let warm_keys_shared = Arc::new(prev_wave_keys.clone());
+            
             let wave_results: Vec<ExecutionResult> = wave_txs
                 .par_iter()
                 .map(|tx| {
-                    let mut ctx = ExecutionContext::new(base_storage.clone());
+                    let storage = base_storage.clone();
+                    
+                    let mut ctx = if warm_keys_shared.is_empty() {
+                        ExecutionContext::new(storage)
+                    } else {
+                        ExecutionContext::with_warm_keys(storage, (*warm_keys_shared).clone())
+                    };
+                    
                     execute_transaction(tx, &mut ctx)
                 })
                 .collect();
@@ -190,6 +198,13 @@ impl<S: KVStore> ParallelExecutor<S> {
                 if result.success {
                     total_gas += result.gas_used;
                 }
+            }
+            
+            // Collect current wave's keys for next wave
+            prev_wave_keys.clear();
+            for result in &wave_results {
+                prev_wave_keys.extend(result.access_sets.reads.iter());
+                prev_wave_keys.extend(result.access_sets.writes.iter());
             }
             // ================================================
 

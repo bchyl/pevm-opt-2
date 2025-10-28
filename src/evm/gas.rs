@@ -36,18 +36,18 @@ pub fn calculate_sload_gas(is_cold: bool) -> u64 {
 /// Gas cost for the SSTORE operation
 /// 
 /// # Example
-/// ```
-/// // Cold access: First time touching key K in this block
+/// ```text
+/// Cold access: First time touching key K in this block
 /// calculate_sstore_gas(true, U256::ZERO, U256::from(100))
-/// // → 20,000 gas (COLD_SSTORE_COST)
+/// -> 20,000 gas (COLD_SSTORE_COST)
 /// 
-/// // Warm access: Key K already touched earlier
+/// Warm access: Key K already touched earlier
 /// calculate_sstore_gas(false, U256::from(50), U256::from(100))
-/// // → 2,900 gas (WARM_SSTORE_COST)
+/// -> 2,900 gas (WARM_SSTORE_COST)
 /// 
-/// // Storage expansion: 0 → non-zero
+/// Storage expansion: 0 -> non-zero
 /// calculate_sstore_gas(false, U256::ZERO, U256::from(1))
-/// // → 20,000 gas (SSTORE_SET_COST)
+/// -> 20,000 gas (SSTORE_SET_COST)
 /// ```
 pub fn calculate_sstore_gas(is_cold: bool, current: U256, new_value: U256) -> u64 {
     let is_zero = current == U256::ZERO;

@@ -31,7 +31,7 @@ impl BlockGenerator {
     /// Generate a synthetic block with controlled conflicts
     /// 
     /// # Algorithm
-    /// ```
+    /// ```text
     /// For each transaction:
     ///   1. Determine read/write set sizes (1-5 reads, 1-3 writes)
     ///   
@@ -50,12 +50,12 @@ impl BlockGenerator {
     /// ```
     /// 
     /// # Example
-    /// ```
-    /// // conflict_ratio=0.2, n_tx=3
-    /// //
-    /// // tx0: reads={K_pool[5]}, writes={K_new[0]}  ← 20% uses pool key
-    /// // tx1: reads={K_pool[5]}, writes={K_new[1]}  ← Conflicts with tx0!
-    /// // tx2: reads={K_new[2]}, writes={K_new[3]}   ← Independent
+    /// ```text
+    /// conflict_ratio=0.2, n_tx=3
+    /// 
+    /// tx0: reads={K_pool[5]}, writes={K_new[0]}  <- 20% uses pool key
+    /// tx1: reads={K_pool[5]}, writes={K_new[1]}  <- Conflicts with tx0!
+    /// tx2: reads={K_new[2]}, writes={K_new[3]}   <- Independent
     /// ```
     pub fn generate(&self) -> Block {
         let mut rng = StdRng::seed_from_u64(self.seed);
