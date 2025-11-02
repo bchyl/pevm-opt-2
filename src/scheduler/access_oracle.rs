@@ -1,37 +1,56 @@
-use crate::types::{AccessSets, ExecutionResult, Key, MicroOp, Transaction};
+use crate::types::{AccessSets, ExecutionResult, MicroOp, Transaction};
 use ahash::AHashMap;
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
 pub trait AccessOracle: Send + Sync {
     fn estimate_access_sets(&self, tx: &Transaction) -> AccessSets;
 }
 
-pub struct HeuristicOracle;
+pub struct HeuristicOracle {
+    miss_rate: f64,
+    rng: std::sync::Mutex<StdRng>,
+}
 
 impl HeuristicOracle {
     pub fn new() -> Self {
-        Self
+        Self::with_miss_rate(0.05)
+    }
+
+    pub fn with_miss_rate(miss_rate: f64) -> Self {
+        Self {
+            miss_rate,
+            rng: std::sync::Mutex::new(StdRng::seed_from_u64(12345)),
+        }
     }
 }
 
 impl Default for HeuristicOracle {
     fn default() -> Self {
-        Self
+        Self::new()
     }
 }
 
 impl AccessOracle for HeuristicOracle {
     fn estimate_access_sets(&self, tx: &Transaction) -> AccessSets {
         let mut sets = AccessSets::new();
-        
-        tx.reads.iter().for_each(|k| sets.add_read(*k));
-        tx.writes.iter().for_each(|k| sets.add_write(*k));
-        tx.metadata.access_list.iter().for_each(|k| sets.add_read(*k));
+        let mut rng = self.rng.lock().unwrap();
+
+        // tx.reads.iter().for_each(|k|sets.add_read(*k));
+        // tx.writes.iter().for_each(|k|sets.add_write(*k));
+        tx.metadata.access_list.iter().for_each(|k| {
+            if rng.gen::<f64>() >= self.miss_rate {
+                sets.add_read(*k);
+            }
+        });
 
         for op in &tx.metadata.program {
-            match op {
-                MicroOp::SLoad(key) => sets.add_read(*key),
-                MicroOp::SStore(key, _) => sets.add_write(*key),
-                _ => {}
+            if rng.gen::<f64>() >= self.miss_rate {
+                match op {
+                    MicroOp::SLoad(key) => sets.add_read(*key),
+                    MicroOp::SStore(key, _) => sets.add_write(*key),
+                    _ => {}
+                }
             }
         }
         sets
@@ -46,7 +65,11 @@ pub struct AccessListBuilder {
 
 impl AccessListBuilder {
     pub fn new(oracle: Box<dyn AccessOracle>) -> Self {
-        Self { oracle, estimated: AHashMap::new(), exact: AHashMap::new() }
+        Self {
+            oracle,
+            estimated: AHashMap::new(),
+            exact: AHashMap::new(),
+        }
     }
 
     pub fn with_heuristic() -> Self {
@@ -64,10 +87,5 @@ impl AccessListBuilder {
 
     pub fn get_estimated(&self, tx_id: u64) -> Option<&AccessSets> {
         self.estimated.get(&tx_id)
-    }
-
-    pub fn clear(&mut self) {
-        self.estimated.clear();
-        self.exact.clear();
     }
 }

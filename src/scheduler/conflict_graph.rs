@@ -1,15 +1,24 @@
 use crate::types::AccessSets;
 use ahash::{AHashMap, AHashSet};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ConflictGraph {
     nodes: AHashMap<u64, AccessSets>,
     edges: AHashMap<u64, AHashSet<u64>>,
 }
 
+impl Default for ConflictGraph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConflictGraph {
     pub fn new() -> Self {
-        Self { nodes: AHashMap::new(), edges: AHashMap::new() }
+        Self {
+            nodes: AHashMap::new(),
+            edges: AHashMap::new(),
+        }
     }
 
     fn add_edge(&mut self, tx1: u64, tx2: u64) {
@@ -17,14 +26,16 @@ impl ConflictGraph {
         self.edges.entry(tx2).or_default().insert(tx1);
     }
 
-    pub fn get_neighbors(&self, tx_id: u64) -> AHashSet<u64> {
-        self.edges.get(&tx_id).cloned().unwrap_or_default()
+    pub fn has_conflict(&self, tx1: u64, tx2: u64) -> bool {
+        self.edges
+            .get(&tx1)
+            .is_some_and(|neighbors| neighbors.contains(&tx2))
     }
 
     pub fn build(transactions: &[(u64, AccessSets)]) -> Self {
         use crate::types::Key;
         let mut graph = Self::new();
-        
+
         for (id, sets) in transactions {
             graph.nodes.insert(*id, sets.clone());
             graph.edges.entry(*id).or_default();
@@ -45,10 +56,16 @@ impl ConflictGraph {
                     candidates.extend(list);
                 }
             }
-            
+
             for &other in &candidates {
-                if other == *id { continue; }
-                let pair = if *id < other { (*id, other) } else { (other, *id) };
+                if other == *id {
+                    continue;
+                }
+                let pair = if *id < other {
+                    (*id, other)
+                } else {
+                    (other, *id)
+                };
                 if checked.insert(pair) {
                     if let Some(other_sets) = graph.nodes.get(&other) {
                         if sets.has_conflict_with(other_sets) {
@@ -61,11 +78,3 @@ impl ConflictGraph {
         graph
     }
 }
-
-impl Default for ConflictGraph {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-

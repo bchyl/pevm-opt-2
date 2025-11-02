@@ -6,6 +6,4 @@ pub mod parallel;
 pub use access_oracle::{AccessListBuilder, AccessOracle, HeuristicOracle};
 pub use conflict_graph::ConflictGraph;
 pub use mis::MIScheduler;
-pub use parallel::ParallelExecutor;
-
-
+pub use parallel::{ParallelExecutionResult, ParallelExecutor};
