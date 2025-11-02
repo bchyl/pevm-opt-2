@@ -2,10 +2,10 @@ use super::{AccessListBuilder, MIScheduler};
 use crate::evm::{execute_transaction, ExecutionContext};
 use crate::storage::{KVStore, MemoryStore};
 use crate::types::{Block, ExecutionResult, Key};
-use crate::{debug, info};
 use ahash::AHashSet;
 use rayon::prelude::*;
 use std::sync::Arc;
+use tracing::{debug, info};
 
 pub struct ParallelExecutionResult {
     pub storage: MemoryStore,

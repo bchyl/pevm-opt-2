@@ -8,7 +8,7 @@ pub use ops::execute_op;
 
 use crate::storage::KVStore;
 use crate::types::{Block, ExecutionResult, Transaction};
-use crate::{debug, error, info};
+use tracing::{debug, error, info};
 
 pub struct SerialExecutionResult<S: KVStore> {
     pub storage: S,

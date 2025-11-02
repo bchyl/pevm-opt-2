@@ -1,8 +1,8 @@
 use crate::evm::SerialExecutionResult;
-use crate::info;
 use crate::scheduler::{AccessListBuilder, ParallelExecutionResult};
 use crate::storage::KVStore;
 use crate::types::{Block, Metrics};
+use tracing::info;
 
 pub struct MetricsCollector;
 

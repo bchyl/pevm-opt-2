@@ -1,7 +1,6 @@
 pub mod cli;
 pub mod evm;
 pub mod generator;
-pub mod log;
 pub mod metrics;
 pub mod scheduler;
 pub mod storage;

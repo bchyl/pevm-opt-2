@@ -4,9 +4,9 @@ use crate::metrics::MetricsCollector;
 use crate::scheduler::{AccessListBuilder, HeuristicOracle, MIScheduler, ParallelExecutor};
 use crate::storage::{KVStore, MemoryStore};
 use crate::types::Block;
-use crate::{error, info};
 use clap::{Parser, Subcommand};
 use std::time::Instant;
+use tracing::{error, info};
 
 fn verify_states<S: KVStore>(state1: &S, state2: &S) -> bool {
     let keys1: std::collections::HashSet<_> = state1.keys().into_iter().collect();
