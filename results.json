@@ -1,14 +1,14 @@
 {
-  "waves": 2,
-  "avg_wave_size": 50.0,
-  "speedup_vs_serial": 0.24383999999999997,
-  "conflict_rate": 0.00020202020202020202,
+  "waves": 3,
+  "avg_wave_size": 1666.6666666666667,
+  "speedup_vs_serial": 3.7443823079409846,
+  "conflict_rate": 0.00003024604920984197,
   "preexec_precision": 1.0,
-  "preexec_recall": 1.0,
+  "preexec_recall": 0.9153439153439153,
   "false_positives": 0,
-  "false_negatives": 0,
-  "tx_latency_p50": 0.48281250000000003,
-  "tx_latency_p95": 0.48281250000000003,
-  "tx_latency_p99": 0.9656250000000001,
-  "iops": 514692.5566343042
+  "false_negatives": 32,
+  "tx_latency_p50": 136.38765266666667,
+  "tx_latency_p95": 272.77530533333334,
+  "tx_latency_p99": 272.77530533333334,
+  "iops": 61163.894508749734
 }
